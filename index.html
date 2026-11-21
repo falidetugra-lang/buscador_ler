@@ -11,6 +11,7 @@
   header { background:var(--primary); color:#fff; padding:2rem 1rem; text-align:center; }
   header h1 { margin:0 0 .5rem; font-size:1.8rem; }
   header p { margin:0; opacity:.9; max-width:720px; margin-inline:auto; }
+  .sync-pill { display:inline-block; margin-top:.75rem; background:rgba(255,255,255,.15); padding:.25rem .75rem; border-radius:999px; font-size:.78rem; }
   .container { max-width:980px; margin:2rem auto; padding:0 1rem; }
   .tabs { display:flex; gap:.5rem; margin-bottom:1.5rem; flex-wrap:wrap; }
   .tab-btn { padding:.75rem 1.25rem; border:1px solid var(--border); background:var(--card); border-radius:8px; cursor:pointer; font-weight:600; color:var(--text); }
@@ -39,9 +40,7 @@
   .cta-actions { display:flex; justify-content:center; gap:.75rem; flex-wrap:wrap; }
   .cta-btn { display:inline-block; padding:.75rem 1.25rem; border-radius:8px; font-weight:700; text-decoration:none; font-size:.95rem; transition:.2s; }
   .cta-btn-primary { background:var(--accent); color:#fff; }
-  .cta-btn-primary:hover { background:#c8530c; }
   .cta-btn-secondary { background:#fff; color:var(--primary); }
-  .cta-btn-secondary:hover { background:#f1f5f9; }
   footer { text-align:center; padding:1.5rem 1rem 2.5rem; color:var(--muted); font-size:.88rem; }
   footer a { color:var(--primary); text-decoration:none; font-weight:600; }
 </style>
@@ -49,7 +48,8 @@
 <body>
 <header>
   <h1>Buscador y Asistente de Código LER</h1>
-  <p>Asigna la "matrícula" oficial a cada residuo siguiendo la jerarquía de 4 pasos (Decisión 2014/955/UE) y evalúa códigos espejo (COP y HP).</p>
+  <p>Asigna la "matrícula" oficial a cada residuo siguiendo la jerarquía de 4 pasos (Decisión 2014/955/UE y Decisión Delegada UE 2025/934) y evalúa códigos espejo.</p>
+  <div class="sync-pill" id="sync-status">Conectando con el catálogo oficial...</div>
 </header>
 <div class="container">
   <div class="tabs">
@@ -76,7 +76,7 @@
   <div id="tab-search" class="card" style="display:none;">
     <span class="step-badge">CONSULTA DIRECTA EN TODO EL CATÁLOGO</span>
     <h2>Busca por descripción del residuo, HP o dígitos LER</h2>
-    <input type="text" id="search-input" placeholder="Ej: lodos, hormigón, alquitrán, disolventes, envases, amianto, 17 01, 19 08..." />
+    <input type="text" id="search-input" placeholder="Ej: pilas alcalinas, litio, lodos, hormigón, alquitrán, 16 06 04, 17 01..." />
     <p style="font-size:.85rem;color:var(--muted);margin-top:.5rem;"><em>Recuerda: tras localizar un código por nombre, verifica siempre que corresponde a tu capítulo de origen según la jerarquía de 4 pasos.</em></p>
     <div class="stats-bar" id="search-count"></div>
     <div id="search-results" style="margin-top:1rem;"></div>
@@ -102,8 +102,6 @@
     </div>
     <div id="mirror-verdict"></div>
   </div>
-
-  <!-- BLOQUE CTA / CONTACTO REVALORIZA -->
   <section class="cta-box">
     <h3>¿Tienes dudas codificando tus residuos o con un código espejo?</h3>
     <p>En <strong>Revaloriza</strong> te ayudamos a identificar la matrícula LER exacta, revisar Fichas de Datos de Seguridad (N.º CAS / COP / HP) y tramitar la documentación ambiental de tu empresa sin riesgos de sanción.</p>
@@ -115,10 +113,12 @@
 </div>
 <footer>
   Herramienta técnica desarrollada por <strong>Revaloriza</strong> (<a href="https://rafaelchinchillajimenez.com" target="_blank" rel="noopener">rafaelchinchillajimenez.com</a>) · Tel. <a href="tel:+34658892085">658 892 085</a> · <a href="mailto:info@revaloriza.net">info@revaloriza.net</a><br/>
-  Basada en Decisión 2014/955/UE, Ley 7/2022 y Reglamento (UE) 2019/1021.
+  Actualizada conforme a Decisión 2014/955/UE, Decisión Delegada (UE) 2025/934, Ley 7/2022 y Reglamento (UE) 2019/1021.
 </footer>
 <script>
 (function(){
+  const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRaYk65T_klrIu3hUi2Y6DZxpbeZ4jMnVaTKMWv9Tx5Yd1Sz7SQFRBKmGrSsPXm7A/pub?gid=1300114722&single=true&output=csv";
+
   const CHAPTERS=[
     {id:"01",step:1,title:"01 - Prospección, extracción de minas y canteras y tratamiento de minerales"},
     {id:"02",step:1,title:"02 - Agricultura, horticultura, acuicultura, silvicultura, caza, pesca y alimentos"},
@@ -142,297 +142,191 @@
     {id:"20",step:1,title:"20 - Residuos municipales (domésticos y asimilables) y fracciones selectivas"}
   ];
 
-  const RAW_LER=[
-    ["01 01 01","Residuos de la extracción de minerales metálicos",""],["01 01 02","Residuos de la extracción de minerales no metálicos",""],
-    ["01 03 04*","Estériles que generan ácido procedentes de la transformación de minerales sulfurados",""],["01 03 05*","Otros estériles que contienen sustancias peligrosas",""],
-    ["01 03 06","Estériles distintos de los mencionados en los códigos 01 03 04 y 01 03 05",""],["01 03 07*","Otros residuos que contienen sustancias peligrosas procedentes de la transformación física y química de minerales metálicos",""],
-    ["01 03 08","Residuos de polvo y arenilla distintos de los mencionados en el código 01 03 07",""],["01 03 99","Residuos no especificados en otra categoría",""],
-    ["01 04 07*","Residuos que contienen sustancias peligrosas procedentes de la transformación física y química de minerales no metálicos",""],
-    ["01 04 08","Residuos de grava y rocas trituradas distintos de los mencionados en el código 01 04 07",""],["01 04 09","Residuos de arena y arcillas",""],
-    ["01 04 13","Residuos del corte y serrado de piedra distintos de los mencionados en el código 01 04 07",""],["01 04 99","Residuos no especificados en otra categoría",""],
-    ["01 05 04","Lodos y residuos de perforaciones que contienen agua dulce",""],["01 05 05*","Lodos y residuos de perforaciones que contienen hidrocarburos",""],
-    ["01 05 06*","Lodos y otros residuos de perforaciones que contienen sustancias peligrosas",""],["01 05 99","Residuos no especificados en otra categoría",""],
-    ["02 01 01","Lodos de lavado y limpieza",""],["02 01 02","Residuos de tejidos de animales",""],["02 01 03","Residuos de tejidos de vegetales",""],
-    ["02 01 04","Residuos de plásticos (excepto embalajes)",""],["02 01 06","Heces de animales, orina y estiércol, efluentes recogidos selectivamente",""],
-    ["02 01 07","Residuos de la silvicultura",""],["02 01 08*","Residuos agroquímicos que contienen sustancias peligrosas",""],
-    ["02 01 09","Residuos agroquímicos distintos de los mencionados en el código 02 01 08",""],["02 01 10","Residuos metálicos",""],["02 01 99","Residuos no especificados en otra categoría",""],
-    ["02 02 04","Lodos del tratamiento in situ de efluentes (cárnica)",""],["02 03 04","Materiales inadecuados para el consumo o la elaboración (frutas/hortalizas)",""],
-    ["02 03 05","Lodos del tratamiento in situ de efluentes (conservas/vegetales)",""],["02 05 02","Lodos del tratamiento in situ de efluentes (industria láctea)",""],
-    ["02 07 05","Lodos del tratamiento in situ de efluentes (bebidas)",""],["02 07 99","Residuos no especificados en otra categoría",""],
-    ["03 01 01","Residuos de corteza y corcho",""],["03 01 04*","Serrín, virutas, recortes, madera y tableros que contienen sustancias peligrosas",""],
-    ["03 01 05","Serrín, virutas, recortes, madera y tableros distintos de los mencionados en el código 03 01 04",""],["03 01 99","Residuos no especificados en otra categoría",""],
-    ["03 02 01*","Conservantes de la madera orgánicos no halogenados",""],["03 03 08","Residuos procedentes de la clasificación de papel y cartón destinados al reciclado",""],
-    ["03 03 11","Lodos del tratamiento in situ de efluentes (papel/cartón)",""],["03 03 99","Residuos no especificados en otra categoría",""],
-    ["04 01 06","Lodos procedentes del tratamiento in situ de efluentes que contienen cromo",""],["04 01 07","Lodos procedentes del tratamiento in situ de efluentes que no contienen cromo",""],
-    ["04 02 14*","Residuos del acabado textil que contienen disolventes orgánicos",""],["04 02 15","Residuos del acabado textil distintos de los especificados en el código 04 02 14",""],
-    ["04 02 22","Residuos de fibras textiles transformadas",""],["04 02 99","Residuos no especificados en otra categoría",""],
-    ["05 01 03*","Lodos de fondos de tanques",""],["05 01 05*","Derrames de hidrocarburos",""],["05 01 06*","Lodos oleosos procedentes de operaciones de mantenimiento de plantas o equipos",""],
-    ["05 01 09*","Lodos del tratamiento in situ de efluentes que contienen sustancias peligrosas",""],["05 01 10","Lodos del tratamiento in situ de efluentes, distintos de los especificados en el código 05 01 09",""],
-    ["05 01 99","Residuos no especificados en otra categoría",""],
-    ["06 01 01*","Ácido sulfúrico y ácido sulfuroso",""],["06 01 02*","Ácido clorhídrico",""],["06 01 06*","Otros ácidos",""],
-    ["06 02 04*","Hidróxido potásico e hidróxido sódico",""],["06 02 05*","Otras bases",""],["06 03 13*","Sales sólidas y soluciones que contienen metales pesados",""],
-    ["06 03 14","Sales sólidas y soluciones distintas de las mencionadas en los códigos 06 03 11 y 06 03 13",""],["06 04 04*","Residuos que contienen mercurio",""],
-    ["06 05 02*","Lodos del tratamiento in situ de efluentes que contienen sustancias peligrosas",""],["06 05 03","Lodos del tratamiento in situ de efluentes, distintos de los especificados en el código 06 05 02",""],
-    ["06 13 02*","Carbón activo usado (excepto la categoría 06 07 02)",""],["06 13 99","Residuos no especificados en otra categoría",""],
-    ["07 01 01*","Líquidos de limpieza y licores madre acuosos",""],["07 01 03*","Disolventes, líquidos de limpieza y licores madre organohalogenados",""],
-    ["07 01 04*","Otros disolventes, líquidos de limpieza y licores madre orgánicos",""],["07 01 11*","Lodos del tratamiento in situ de efluentes que contienen sustancias peligrosas",""],
-    ["07 01 12","Lodos del tratamiento in situ de efluentes, distintos de los especificados en el código 07 01 11",""],["07 02 13","Residuos de plástico",""],
-    ["07 05 13*","Residuos sólidos que contienen sustancias peligrosas (farmacéutica)",""],["07 05 14","Residuos sólidos distintos de los especificados en el código 07 05 13",""],
-    ["07 01 99","Residuos no especificados en otra categoría",""],
-    ["08 01 11*","Residuos de pintura y barniz que contienen disolventes orgánicos u otras sustancias peligrosas","HP 3 / HP 4 / HP 14"],
-    ["08 01 12","Residuos de pintura y barniz, distintos de los especificados en el código 08 01 11",""],
-    ["08 01 13*","Lodos de pintura y barniz que contienen disolventes orgánicos u otras sustancias peligrosas",""],
-    ["08 01 14","Lodos de pintura y barniz, distintos de los especificados en el código 08 01 13",""],
-    ["08 01 15*","Lodos acuosos que contienen pintura o barniz con disolventes orgánicos u otras sustancias peligrosas",""],
-    ["08 01 16","Lodos acuosos que contienen pintura o barniz, distintos de los especificados en el código 08 01 15",""],
-    ["08 01 17*","Residuos del decapado o eliminación de pintura y barniz que contienen disolventes orgánicos u otras sustancias peligrosas",""],
-    ["08 01 18","Residuos del decapado o eliminación de pintura y barniz, distintos de los especificados en el código 08 01 17",""],
-    ["08 01 21*","Residuos de decapantes o eliminadores de pintura y barniz",""],["08 01 99","Residuos no especificados en otra categoría",""],
-    ["08 03 12*","Residuos de tintas que contienen sustancias peligrosas",""],["08 03 13","Residuos de tintas distintos de los especificados en el código 08 03 12",""],
-    ["08 03 17*","Residuos de tóner de impresión que contienen sustancias peligrosas",""],["08 03 18","Residuos de tóner de impresión, distintos de los especificados en el código 08 03 17",""],
-    ["08 04 09*","Residuos de adhesivos y sellantes que contienen disolventes orgánicos u otras sustancias peligrosas",""],
-    ["08 04 10","Residuos de adhesivos y sellantes, distintos de los especificados en el código 08 04 09",""],["08 05 01*","Isocianatos residuales",""],
-    ["09 01 01*","Soluciones de revelado y soluciones activadoras al agua",""],["09 01 04*","Soluciones de fijado",""],
-    ["09 01 07","Películas y papel fotográfico que contienen plata o compuestos de plata",""],["09 01 08","Películas y papel fotográfico que no contienen plata ni compuestos de plata",""],
-    ["09 01 99","Residuos no especificados en otra categoría",""],
-    ["10 01 01","Ceniza de fondo de horno, escorias y polvo de caldera (excepto el código 10 01 04)",""],["10 01 02","Cenizas volantes de carbón",""],
-    ["10 01 03","Cenizas volantes de turba y de madera (no tratada)",""],["10 01 04*","Cenizas volantes y polvo de caldera de hidrocarburos",""],
-    ["10 01 14*","Ceniza de fondo de horno, escorias y polvo de caldera procedentes de la coincineración que contienen sustancias peligrosas",""],
-    ["10 01 15","Ceniza de fondo de horno, escorias y polvo de caldera procedentes de la coincineración, distintos de los especificados en el código 10 01 14",""],
-    ["10 01 16*","Cenizas volantes procedentes de la co-incineración que contienen sustancias peligrosas",""],
-    ["10 01 17","Cenizas volantes procedentes de la co-incineración distintas de las especificadas en el código 10 01 16",""],
-    ["10 01 99","Residuos no especificados en otra categoría",""],
-    ["10 11 11*","Residuos de pequeñas partículas y polvo de vidrio que contienen metales pesados",""],["10 11 12","Residuos de vidrio distintos de los especificados en el código 10 11 11",""],
-    ["10 12 08","Residuos de cerámica, ladrillos, tejas y materiales de construcción (tras cocción)",""],
-    ["10 13 09*","Residuos de la fabricación de fibrocemento que contienen amianto",""],["10 13 10","Residuos de la fabricación de fibrocemento distintos de los especificados en el código 10 13 09",""],
-    ["10 13 14","Residuos de hormigón y lodos de hormigón",""],
-    ["11 01 05*","Ácidos de decapado",""],["11 01 07*","Bases de decapado",""],
-    ["11 01 09*","Lodos y tortas de filtración que contienen sustancias peligrosas",""],["11 01 10","Lodos y tortas de filtración distintos de los especificados en el código 11 01 09",""],
-    ["11 01 11*","Líquidos acuosos de enjuague que contienen sustancias peligrosas",""],["11 01 12","Líquidos acuosos de enjuague distintos de los especificados en el código 11 01 11",""],
-    ["11 01 13*","Residuos de desengrasado que contienen sustancias peligrosas",""],["11 01 14","Residuos de desengrasado distintos de los especificados en el código 11 01 13",""],
-    ["11 01 98*","Otros residuos que contienen sustancias peligrosas",""],["11 01 99","Residuos no especificados en otra categoría",""],
-    ["12 01 01","Limaduras y virutas de metales férreos",""],["12 01 03","Limaduras y virutas de metales no férreos",""],
-    ["12 01 05","Virutas y rebabas de plástico",""],["12 01 07*","Aceites minerales de mecanizado sin halógenos",""],
-    ["12 01 09*","Emulsiones y disoluciones de mecanizado sin halógenos",""],["12 01 12*","Ceras y grasas usadas",""],["12 01 13","Residuos de soldadura",""],
-    ["12 01 14*","Lodos de mecanizado que contienen sustancias peligrosas",""],["12 01 15","Lodos de mecanizado distintos de los especificados en el código 12 01 14",""],
-    ["12 01 16*","Residuos de granallado o chorreado que contienen sustancias peligrosas",""],["12 01 17","Residuos de granallado o chorreado distintos de los especificados en el código 12 01 16",""],
-    ["12 01 18*","Lodos metálicos (esmerilado, rectificado y lapeado) que contienen aceites",""],
-    ["12 01 20*","Muelas y materiales de esmerilado usados que contienen sustancias peligrosas",""],["12 01 21","Muelas y materiales de esmerilado usados distintos de los especificados en el código 12 01 20",""],
-    ["12 01 99","Residuos no especificados en otra categoría",""],
-    ["13 01 01*","Aceites hidráulicos que contienen PCB",""],["13 01 10*","Aceites hidráulicos minerales no clorados",""],["13 01 11*","Aceites hidráulicos sintéticos",""],
-    ["13 02 04*","Aceites minerales clorados de motor, de transmisión mecánica y lubricantes",""],
+  const FALLBACK_LER=[
     ["13 02 05*","Aceites minerales no clorados de motor, de transmisión mecánica y lubricantes","HP 4 / HP 7"],
-    ["13 02 06*","Aceites sintéticos de motor, de transmisión mecánica y lubricantes",""],["13 02 08*","Otros aceites de motor, de transmisión mecánica y lubricantes",""],
-    ["13 03 01*","Aceites de aislamiento y transmisión de calor que contienen PCB",""],["13 03 07*","Aceites minerales no clorados de aislamiento y transmisión de calor",""],
-    ["13 05 01*","Sólidos procedentes de desarenadores y de separadores de agua/sustancias aceitosas",""],["13 05 02*","Lodos de separadores de agua/sustancias aceitosas",""],
-    ["13 05 03*","Lodos de interceptores",""],["13 05 06*","Aceites procedentes de separadores de agua/sustancias aceitosas",""],
-    ["13 05 07*","Agua aceitosa procedente de separadores de agua/sustancias aceitosas",""],["13 05 08*","Mezcla de residuos procedentes de desarenadores y separadores de agua/aceite",""],
-    ["13 07 01*","Fuelóleo y gasóleo",""],["13 07 02*","Gasolina",""],["13 07 03*","Otros combustibles (incluidas mezclas)",""],
-    ["13 08 02*","Otras emulsiones",""],["13 08 99*","Residuos no especificados en otra categoría",""],
-    ["14 06 01*","Clorofluorocarburos, HCFC, HFC",""],["14 06 02*","Otros disolventes y mezclas de disolventes halogenados",""],
-    ["14 06 03*","Otros disolventes y mezclas de disolventes","HP 3 / HP 4 / HP 5"],
-    ["14 06 04*","Lodos o residuos sólidos que contienen disolventes halogenados",""],["14 06 05*","Lodos o residuos sólidos que contienen otros disolventes",""],
-    ["15 01 01","Envases de papel y cartón",""],["15 01 02","Envases de plástico",""],["15 01 03","Envases de madera",""],
-    ["15 01 04","Envases metálicos",""],["15 01 05","Envases compuestos",""],["15 01 06","Envases mezclados",""],
-    ["15 01 07","Envases de vidrio",""],["15 01 09","Envases textiles",""],
     ["15 01 10*","Envases que contienen restos de sustancias peligrosas o están contaminados por ellas","HP 4 / HP 14"],
-    ["15 01 11*","Envases metálicos, incluidos recipientes a presión vacíos, con matriz sólida y porosa peligrosa (ej. amianto)",""],
-    ["15 02 02*","Absorbentes, materiales de filtración, trapos de limpieza y ropas protectoras contaminados por sustancias peligrosas","HP 3 / HP 4 / HP 5"],
-    ["15 02 03","Absorbentes, materiales de filtración, trapos de limpieza y ropas protectoras distintos de los especificados en el código 15 02 02",""],
-    ["16 01 03","Neumáticos al final de su vida útil",""],["16 01 04*","Vehículos al final de su vida útil",""],
-    ["16 01 06","Vehículos al final de su vida útil que no contengan líquidos ni otros componentes peligrosos",""],
-    ["16 01 07*","Filtros de aceite","HP 4 / HP 7"],["16 01 11*","Zapatas de freno que contienen amianto",""],
-    ["16 01 12","Zapatas de freno distintas de las especificadas en el código 16 01 11",""],["16 01 13*","Líquidos de frenos",""],
-    ["16 01 14*","Anticongelantes que contienen sustancias peligrosas",""],["16 01 15","Anticongelantes distintos de los especificados en el código 16 01 14",""],
-    ["16 01 17","Metales férreos",""],["16 01 18","Metales no férreos",""],["16 01 19","Plástico",""],["16 01 20","Vidrio",""],
-    ["16 02 09*","Transformadores y condensadores que contienen PCB",""],["16 02 11*","Equipos desechados que contienen clorofluorocarburos, HCFC, HFC",""],
-    ["16 02 13*","Equipos desechados que contienen componentes peligrosos, distintos de los especificados en los códigos 16 02 09 a 16 02 12",""],
-    ["16 02 14","Equipos desechados distintos de los especificados en los códigos 16 02 09 a 16 02 13",""],
-    ["16 02 15*","Componentes peligrosos retirados de equipos desechados",""],["16 02 16","Componentes retirados de equipos desechados distintos de los especificados en el código 16 02 15",""],
-    ["16 03 03*","Residuos inorgánicos que contienen sustancias peligrosas",""],["16 03 04","Residuos inorgánicos distintos de los especificados en el código 16 03 03",""],
-    ["16 03 05*","Residuos orgánicos que contienen sustancias peligrosas",""],["16 03 06","Residuos orgánicos distintos de los especificados en el código 16 03 05",""],
-    ["16 05 04*","Gases en recipientes a presión (incluidos los halones) que contienen sustancias peligrosas","HP 3"],
-    ["16 05 05","Gases en recipientes a presión, distintos de los especificados en el código 16 05 04",""],
-    ["16 05 06*","Productos químicos de laboratorio que consisten en sustancias peligrosas o las contienen",""],
-    ["16 06 01*","Baterías de plomo","HP 6 / HP 8 / HP 10 / HP 14"],["16 06 02*","Acumuladores de Ni-Cd",""],
-    ["16 06 03*","Pilas que contienen mercurio",""],["16 06 04","Pilas alcalinas (excepto 16 06 03)",""],["16 06 05","Otras pilas y acumuladores",""],
-    ["16 07 08*","Residuos que contienen hidrocarburos",""],["16 07 09*","Residuos que contienen otras sustancias peligrosas",""],["16 07 99","Residuos no especificados en otra categoría",""],
-    ["16 10 01*","Residuos líquidos acuosos que contienen sustancias peligrosas",""],["16 10 02","Residuos líquidos acuosos distintos de los especificados en el código 16 10 01",""],
-    ["17 01 01","Hormigón",""],["17 01 02","Ladrillos",""],["17 01 03","Tejas y materiales cerámicos",""],
-    ["17 01 06*","Mezclas, o fracciones separadas, de hormigón, ladrillos, tejas y materiales cerámicos que contienen sustancias peligrosas",""],
+    ["16 06 04*","Residuos de pilas y baterías alcalinas (distintos de los especificados en el código 16 06 03)","HP 4 / HP 8"],
+    ["16 06 07*","Residuos de baterías de litio","HP 3 / HP 6 / HP 14"],
+    ["17 01 06*","Mezclas de hormigón, ladrillos, tejas y materiales cerámicos que contienen sustancias peligrosas",""],
     ["17 01 07","Mezclas de hormigón, ladrillos, tejas y materiales cerámicos, distintas de las especificadas en el código 17 01 06",""],
-    ["17 02 01","Madera",""],["17 02 02","Vidrio",""],["17 02 03","Plástico",""],
-    ["17 02 04*","Vidrio, plástico y madera que contienen sustancias peligrosas o están contaminados por ellas",""],
-    ["17 03 01*","Mezclas bituminosas que contienen alquitrán de hulla",""],["17 03 02","Mezclas bituminosas distintas de las especificadas en el código 17 03 01",""],
     ["17 03 03*","Alquitrán de hulla y productos alquitranados","HP 7"],
-    ["17 04 01","Cobre, bronce, latón",""],["17 04 02","Aluminio",""],["17 04 03","Plomo",""],["17 04 04","Zinc",""],
-    ["17 04 05","Hierro y acero",""],["17 04 06","Estaño",""],["17 04 07","Metales mezclados",""],
-    ["17 04 09*","Residuos metálicos contaminados con sustancias peligrosas",""],
-    ["17 04 10*","Cables que contienen hidrocarburos, alquitrán de hulla y otras sustancias peligrosas",""],
-    ["17 04 11","Cables distintos de los especificados en el código 17 04 10",""],
-    ["17 05 03*","Tierra y piedras que contienen sustancias peligrosas",""],["17 05 04","Tierra y piedras distintas de las especificadas en el código 17 05 03",""],
-    ["17 05 05*","Lodos de drenaje que contienen sustancias peligrosas",""],["17 05 06","Lodos de drenaje distintos de los especificados en el código 17 05 05",""],
-    ["17 05 07*","Balasto de vías férreas que contiene sustancias peligrosas",""],["17 05 08","Balasto de vías férreas distinto del especificado en el código 17 05 07",""],
-    ["17 06 01*","Materiales de aislamiento que contienen amianto",""],
-    ["17 06 03*","Otros materiales de aislamiento que consisten en sustancias peligrosas o contienen dichas sustancias",""],
-    ["17 06 04","Materiales de aislamiento distintos de los especificados en los códigos 17 06 01 y 17 06 03",""],
-    ["17 06 05*","Materiales de construcción que contienen amianto",""],
-    ["17 08 01*","Materiales de construcción a base de yeso contaminados con sustancias peligrosas",""],
-    ["17 08 02","Materiales de construcción a base de yeso distintos de los especificados en el código 17 08 01",""],
-    ["17 09 01*","Residuos de construcción y demolición que contienen mercurio",""],
-    ["17 09 02*","Residuos de construcción y demolición que contienen PCB (sellantes, revestimientos, acristalamientos, condensadores)",""],
-    ["17 09 03*","Otros residuos de construcción y demolición (incluidos los mezclados) que contienen sustancias peligrosas",""],
-    ["17 09 04","Residuos mezclados de construcción y demolición distintos de los especificados en los códigos 17 09 01, 17 09 02 y 17 09 03",""],
-    ["18 01 01","Objetos cortantes y punzantes (excepto el código 18 01 03)",""],
-    ["18 01 02","Restos anatómicos y órganos, incluidos bolsas y bancos de sangre (excepto el código 18 01 03)",""],
-    ["18 01 03*","Residuos cuya recogida y eliminación son objeto de requisitos especiales para prevenir infecciones","HP 9"],
-    ["18 01 04","Residuos cuya recogida y eliminación no son objeto de requisitos especiales para prevenir infecciones (vendajes, yesos, pañales)",""],
-    ["18 01 06*","Productos químicos que consisten en sustancias peligrosas o contienen dichas sustancias",""],
-    ["18 01 07","Productos químicos distintos de los especificados en el código 18 01 06",""],
-    ["18 01 08*","Medicamentos citotóxicos y citostáticos",""],["18 01 09","Medicamentos distintos de los especificados en el código 18 01 08",""],
-    ["18 01 10*","Residuos de amalgamas procedentes de cuidados dentales",""],
-    ["18 02 01","Objetos cortantes y punzantes (excepto el código 18 02 02)",""],
-    ["18 02 02*","Residuos veterinarios cuya recogida y eliminación son objeto de requisitos especiales para prevenir infecciones","HP 9"],
-    ["18 02 03","Residuos veterinarios distintos de los especificados en el código 18 02 02",""],
-    ["19 02 03","Residuos mezclados previamente, compuestos exclusivamente por residuos no peligrosos",""],
-    ["19 02 04*","Residuos mezclados previamente, compuestos por al menos un residuo peligroso",""],
-    ["19 02 05*","Lodos de tratamientos fisicoquímicos que contienen sustancias peligrosas",""],
-    ["19 02 06","Lodos de tratamientos fisicoquímicos, distintos de los especificados en el código 19 02 05",""],
-    ["19 02 07*","Aceite y concentrados procedentes del proceso de separación",""],["19 02 11*","Otros residuos que contienen sustancias peligrosas",""],
-    ["19 02 99","Residuos no especificados en otra categoría",""],
-    ["19 05 01","Fracción no compostada de residuos municipales y asimilados",""],["19 05 03","Compost fuera de especificación",""],
-    ["19 06 04","Lodos de digestión del tratamiento anaeróbico de residuos municipales",""],
-    ["19 06 06","Lodos de digestión del tratamiento anaeróbico de residuos animales y vegetales",""],
-    ["19 07 02*","Lixiviados de vertedero que contienen sustancias peligrosas",""],["19 07 03","Lixiviados de vertedero distintos de los especificados en el código 19 07 02",""],
-    ["19 08 01","Residuos de cribado",""],["19 08 02","Residuos de desarenado",""],["19 08 05","Lodos del tratamiento de aguas residuales urbanas",""],
-    ["19 08 06*","Resinas intercambiadoras de iones saturadas o usadas",""],["19 08 07*","Soluciones y lodos de la regeneración de intercambiadores de iones",""],
-    ["19 08 08*","Residuos procedentes de sistemas de membranas que contienen metales pesados",""],
-    ["19 08 09","Mezclas de grasas y aceites procedentes de la separación de agua/sustancias aceitosas que contienen solamente aceites y grasas comestibles",""],
-    ["19 08 10*","Mezclas de grasas y aceites procedentes de la separación de agua/sustancias aceitosas distintas de las especificadas en el código 19 08 09",""],
-    ["19 08 11*","Lodos que contienen sustancias peligrosas procedentes del tratamiento biológico de aguas residuales industriales",""],
-    ["19 08 12","Lodos procedentes del tratamiento biológico de aguas residuales industriales distintos de los especificados en el código 19 08 11",""],
-    ["19 08 13*","Lodos que contienen sustancias peligrosas procedentes de otros tratamientos de aguas residuales industriales",""],
-    ["19 08 14","Lodos procedentes de otros tratamientos de aguas residuales industriales, distintos de los especificados en el código 19 08 13",""],
-    ["19 08 99","Residuos no especificados en otra categoría",""],
-    ["19 09 02","Lodos de la clarificación del agua",""],["19 09 04","Carbón activo usado",""],
-    ["19 12 01","Papel y cartón",""],["19 12 02","Metales férreos",""],["19 12 03","Metales no férreos",""],["19 12 04","Plástico y caucho",""],["19 12 05","Vidrio",""],
-    ["19 12 06*","Madera que contiene sustancias peligrosas",""],["19 12 07","Madera distinta de la especificada en el código 19 12 06",""],
-    ["19 12 08","Materias textiles",""],["19 12 09","Minerales (por ejemplo, arena, piedras)",""],["19 12 10","Residuos combustibles (CDR)",""],
-    ["19 12 11*","Otros residuos procedentes del tratamiento mecánico de residuos que contienen sustancias peligrosas",""],
-    ["19 12 12","Otros residuos procedentes del tratamiento mecánico de residuos, distintos de los especificados en el código 19 12 11",""],
-    ["19 13 01*","Residuos sólidos de la recuperación de suelos que contienen sustancias peligrosas",""],
-    ["19 13 02","Residuos sólidos de la recuperación de suelos distintos de los especificados en el código 19 13 01",""],
-    ["20 01 01","Papel y cartón",""],["20 01 02","Vidrio",""],["20 01 08","Residuos biodegradables de cocinas y restaurantes",""],
-    ["20 01 10","Ropa",""],["20 01 11","Materias textiles",""],["20 01 13*","Disolventes",""],["20 01 14*","Ácidos",""],["20 01 15*","Álcalis",""],
-    ["20 01 17*","Productos fotoquímicos",""],["20 01 19*","Plaguicidas",""],["20 01 21*","Tubos fluorescentes y otros residuos que contienen mercurio",""],
-    ["20 01 23*","Equipos desechados que contienen clorofluorocarburos",""],["20 01 25","Aceites y grasas comestibles",""],
-    ["20 01 26*","Aceites y grasas distintos de los especificados en el código 20 01 25",""],
-    ["20 01 27*","Pinturas, tintas, adhesivos y resinas que contienen sustancias peligrosas",""],
-    ["20 01 28","Pinturas, tintas, adhesivos y resinas distintos de los especificados en el código 20 01 27",""],
-    ["20 01 29*","Detergentes que contienen sustancias peligrosas",""],["20 01 30","Detergentes distintos de los especificados en el código 20 01 29",""],
-    ["20 01 31*","Medicamentos citotóxicos y citostáticos",""],["20 01 32","Medicamentos distintos de los especificados en el código 20 01 31",""],
-    ["20 01 33*","Baterías y acumuladores especificados en los códigos 16 06 01, 16 06 02 o 16 06 03",""],
-    ["20 01 34","Baterías y acumuladores distintos de los especificados en el código 20 01 33",""],
-    ["20 01 35*","Equipos eléctricos y electrónicos desechados que contienen componentes peligrosos",""],
-    ["20 01 36","Equipos eléctricos y electrónicos desechados distintos de los especificados en los códigos 20 01 21, 20 01 23 y 20 01 35",""],
-    ["20 01 37*","Madera que contiene sustancias peligrosas",""],["20 01 38","Madera distinta de la especificada en el código 20 01 37",""],
-    ["20 01 39","Plásticos",""],["20 01 40","Metales",""],["20 01 41","Residuos del deshollinado de chimeneas",""],["20 01 99","Otras fracciones no especificadas en otra categoría",""],
-    ["20 02 01","Residuos biodegradables",""],["20 02 02","Tierra y piedras",""],["20 02 03","Otros residuos no biodegradables",""],
-    ["20 03 01","Mezclas de residuos municipales",""],["20 03 02","Residuos de mercados",""],["20 03 03","Residuos de limpieza viaria",""],
-    ["20 03 04","Lodos de fosas sépticas",""],["20 03 06","Residuos de la limpieza de alcantarillas",""],["20 03 07","Residuos voluminosos",""],
-    ["20 03 99","Residuos municipales no especificados en otra categoría",""]
+    ["19 08 05","Lodos del tratamiento de aguas residuales urbanas",""],
+    ["20 03 04","Lodos de fosas sépticas",""]
   ];
 
-  const LER_DB=RAW_LER.map(function(r){
-    const code=r[0],desc=r[1],hp=r[2],clean=code.replace('*','').trim(),isStar=code.indexOf('*')!==-1,ch=code.substring(0,2),is99=clean.slice(-3)===' 99';
-    let pairs=[];
-    if(!isStar && /distint[oa]s? de l[oa]s? (?:especificad[oa]s?|mencionad[oa]s?) en (?:el|los) códigos?/i.test(desc)){
-      const refs=desc.match(/\d{2}\s\d{2}\s\d{2}/g)||[];
-      pairs=refs.map(function(x){return x+'*';});
-    }
-    return {code:code,clean:clean,isStar:isStar,ch:ch,desc:desc,hp:hp,is99:is99,type:isStar?'rp':'rnp',pairs:pairs};
-  });
+  let LER_DB = [];
+  let currentStep = 1;
 
-  LER_DB.forEach(function(item){
-    if(item.pairs.length>0){
-      item.type='mirror';
-      item.pairs.forEach(function(sc){
-        const p=LER_DB.find(function(x){return x.code===sc;});
-        if(p){p.type='mirror';if(p.pairs.indexOf(item.code)===-1)p.pairs.push(item.code);}
-      });
-    }
-  });
+  function buildDB(rows) {
+    const db = rows.map(function(r) {
+      const code = (r[0] || "").trim();
+      const desc = (r[1] || "").trim();
+      const hp = (r[2] || "").trim();
+      const clean = code.replace('*', '').trim();
+      const isStar = code.indexOf('*') !== -1;
+      const ch = code.substring(0, 2);
+      const is99 = clean.slice(-3) === ' 99';
+      let pairs = [];
+      if (!isStar && /distint[oa]s? de l[oa]s? (?:especificad[oa]s?|mencionad[oa]s?) en (?:el|los) códigos?/i.test(desc)) {
+        const refs = desc.match(/\d{2}\s\d{2}\s\d{2}/g) || [];
+        pairs = refs.map(function(x) { return x + '*'; });
+      }
+      return { code: code, clean: clean, isStar: isStar, ch: ch, desc: desc, hp: hp, is99: is99, type: isStar ? 'rp' : 'rnp', pairs: pairs };
+    });
 
-  let currentStep=1;
-  function switchTab(tab){
-    document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-tab')===tab);});
-    ['wizard','search','mirror'].forEach(function(t){document.getElementById('tab-'+t).style.display=(t===tab)?'block':'none';});
-    if(tab==='search')filterCodes();
+    db.forEach(function(item) {
+      if (item.pairs.length > 0) {
+        item.type = 'mirror';
+        item.pairs.forEach(function(sc) {
+          const p = db.find(function(x) { return x.code === sc; });
+          if (p) {
+            p.type = 'mirror';
+            if (p.pairs.indexOf(item.code) === -1) p.pairs.push(item.code);
+          }
+        });
+      }
+    });
+    return db;
   }
-  function selectStep(step){
-    currentStep=step;
-    document.querySelectorAll('.step-box').forEach(function(b){b.classList.toggle('selected',parseInt(b.getAttribute('data-step'),10)===step);});
+
+  function parseCSV(text) {
+    const rows = [];
+    let cur = '', row = [], inQ = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (c === '"') {
+        if (inQ && text[i + 1] === '"') { cur += '"'; i++; }
+        else { inQ = !inQ; }
+      } else if (c === ',' && !inQ) {
+        row.push(cur.trim()); cur = '';
+      } else if ((c === '\n' || (c === '\r' && text[i + 1] === '\n')) && !inQ) {
+        if (c === '\r') i++;
+        row.push(cur.trim());
+        rows.push(row);
+        row = []; cur = '';
+      } else {
+        cur += c;
+      }
+    }
+    if (cur || row.length) { row.push(cur.trim()); rows.push(row); }
+
+    const out = [];
+    for (let j = 0; j < rows.length; j++) {
+      const cols = rows[j];
+      if (cols.length >= 3 && /^\d{2}\s\d{2}\s\d{2}\*?$/.test(cols[0])) {
+        const descClean = cols[2].replace(/\s+/g, ' ').trim();
+        const hpVal = (cols[3] && cols[3] !== 'No aplica' && cols[3].indexOf('Según caracterización') === -1) ? cols[3] : '';
+        out.push([cols[0], descClean, hpVal]);
+      }
+    }
+    return out;
+  }
+
+  function initData() {
+    const statusEl = document.getElementById('sync-status');
+    fetch(SHEET_CSV_URL)
+      .then(function(res) { return res.text(); })
+      .then(function(csv) {
+        const parsed = parseCSV(csv);
+        if (parsed.length > 10) {
+          LER_DB = buildDB(parsed);
+          statusEl.textContent = "Catálogo sincronizado en directo con Google Sheets (" + LER_DB.length + " códigos oficiales)";
+        } else {
+          throw new Error("CSV sin datos");
+        }
+        populateChapters();
+      })
+      .catch(function() {
+        LER_DB = buildDB(FALLBACK_LER);
+        statusEl.textContent = "Catálogo activo (modo respaldo local)";
+        populateChapters();
+      });
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-tab') === tab); });
+    ['wizard', 'search', 'mirror'].forEach(function(t) { document.getElementById('tab-' + t).style.display = (t === tab) ? 'block' : 'none'; });
+    if (tab === 'search') filterCodes();
+  }
+
+  function selectStep(step) {
+    currentStep = step;
+    document.querySelectorAll('.step-box').forEach(function(b) { b.classList.toggle('selected', parseInt(b.getAttribute('data-step'), 10) === step); });
     populateChapters();
   }
-  function populateChapters(){
-    const sel=document.getElementById('chapter-select');sel.innerHTML='';
-    CHAPTERS.filter(function(c){return currentStep===4?c.step===1:c.step===currentStep;}).forEach(function(c){
-      const o=document.createElement('option');o.value=c.id;o.textContent=c.title;sel.appendChild(o);
+
+  function populateChapters() {
+    const sel = document.getElementById('chapter-select');
+    sel.innerHTML = '';
+    CHAPTERS.filter(function(c) { return currentStep === 4 ? c.step === 1 : c.step === currentStep; }).forEach(function(c) {
+      const o = document.createElement('option'); o.value = c.id; o.textContent = c.title; sel.appendChild(o);
     });
     renderChapterCodes();
   }
-  function renderItemHTML(item){
-    let badge='',btn='';
-    if(item.type==='mirror'){badge='<span class="badge badge-mirror">Código Espejo (&harr; '+item.pairs.join(' / ')+')</span>';btn='<button class="btn-outline" data-eval="'+item.code+'">Evaluar COP / HP</button>';}
-    else if(item.type==='rp'){badge='<span class="badge badge-rp">Peligroso Absoluto (*)</span>';}
-    else{badge='<span class="badge badge-rnp">No Peligroso Absoluto</span>';}
-    const hpText=item.hp?'<div class="ler-meta"><strong>HP orientativos:</strong> '+item.hp+'</div>':'';
-    return '<div class="ler-item"><div style="flex:1;min-width:250px;"><div class="ler-code">'+item.code+'</div><div>'+item.desc+'</div>'+hpText+'</div><div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">'+badge+btn+'</div></div>';
+
+  function renderItemHTML(item) {
+    let badge = '', btn = '';
+    if (item.type === 'mirror') {
+      badge = '<span class="badge badge-mirror">Código Espejo (&harr; ' + item.pairs.join(' / ') + ')</span>';
+      btn = '<button class="btn-outline" data-eval="' + item.code + '">Evaluar COP / HP</button>';
+    } else if (item.type === 'rp') {
+      badge = '<span class="badge badge-rp">Peligroso Absoluto (*)</span>';
+    } else {
+      badge = '<span class="badge badge-rnp">No Peligroso Absoluto</span>';
+    }
+    const hpText = item.hp ? '<div class="ler-meta"><strong>HP orientativos:</strong> ' + item.hp + '</div>' : '';
+    return '<div class="ler-item"><div style="flex:1;min-width:250px;"><div class="ler-code">' + item.code + '</div><div>' + item.desc + '</div>' + hpText + '</div><div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">' + badge + btn + '</div></div>';
   }
-  function renderChapterCodes(){
-    const ch=document.getElementById('chapter-select').value,box=document.getElementById('wizard-results'),cnt=document.getElementById('wizard-count');
-    if(currentStep===4){
-      const list=LER_DB.filter(function(i){return i.ch===ch&&i.is99;});
-      cnt.textContent='Mostrando '+list.length+' código(s) de último recurso (xx xx 99) en el capítulo '+ch+':';
-      box.innerHTML='<div class="modal-panel" style="margin-bottom:1rem;"><strong>Regla del Paso 4:</strong> Únicamente si has descartado todos los códigos específicos de los pasos 1, 2 y 3, asigna el código genérico acabado en <code>99</code> del capítulo <strong>'+ch+'</strong>.</div>'+list.map(renderItemHTML).join('');
+
+  function renderChapterCodes() {
+    const ch = document.getElementById('chapter-select').value, box = document.getElementById('wizard-results'), cnt = document.getElementById('wizard-count');
+    if (currentStep === 4) {
+      const list = LER_DB.filter(function(i) { return i.ch === ch && i.is99; });
+      cnt.textContent = 'Mostrando ' + list.length + ' código(s) de último recurso (xx xx 99) en el capítulo ' + ch + ':';
+      box.innerHTML = '<div class="modal-panel" style="margin-bottom:1rem;"><strong>Regla del Paso 4:</strong> Únicamente si has descartado todos los códigos específicos de los pasos 1, 2 y 3, asigna el código genérico acabado en <code>99</code> del capítulo <strong>' + ch + '</strong>.</div>' + list.map(renderItemHTML).join('');
       return;
     }
-    const list=LER_DB.filter(function(i){return i.ch===ch&&(currentStep===1?!i.is99:true);});
-    cnt.textContent='Mostrando '+list.length+' códigos oficiales en este capítulo:';
-    box.innerHTML=list.map(renderItemHTML).join('');
+    const list = LER_DB.filter(function(i) { return i.ch === ch && (currentStep === 1 ? !i.is99 : true); });
+    cnt.textContent = 'Mostrando ' + list.length + ' códigos oficiales en este capítulo:';
+    box.innerHTML = list.map(renderItemHTML).join('');
   }
-  function filterCodes(){
-    const q=document.getElementById('search-input').value.toLowerCase().trim();
-    const res=LER_DB.filter(function(i){return i.code.toLowerCase().indexOf(q)!==-1||i.desc.toLowerCase().indexOf(q)!==-1||(i.hp&&i.hp.toLowerCase().indexOf(q)!==-1);});
-    document.getElementById('search-count').textContent='Mostrando '+res.length+' de '+LER_DB.length+' códigos LER:';
-    document.getElementById('search-results').innerHTML=res.length?res.map(renderItemHTML).join(''):'<p style="color:var(--muted);">No se encontraron coincidencias.</p>';
+
+  function filterCodes() {
+    const q = document.getElementById('search-input').value.toLowerCase().trim();
+    const res = LER_DB.filter(function(i) { return i.code.toLowerCase().indexOf(q) !== -1 || i.desc.toLowerCase().indexOf(q) !== -1 || (i.hp && i.hp.toLowerCase().indexOf(q) !== -1); });
+    document.getElementById('search-count').textContent = 'Mostrando ' + res.length + ' de ' + LER_DB.length + ' códigos LER:';
+    document.getElementById('search-results').innerHTML = res.length ? res.map(renderItemHTML).join('') : '<p style="color:var(--muted);">No se encontraron coincidencias.</p>';
   }
-  function goToMirror(code){
-    const item=LER_DB.find(function(i){return i.code===code;}),banner=document.getElementById('selected-mirror-banner');
-    if(item)banner.innerHTML='<div class="modal-panel" style="margin-bottom:1rem;border-left-color:var(--mirror);background:var(--mirror-bg);"><strong>Evaluando código espejo:</strong> <code>'+item.code+'</code> &harr; <code>'+item.pairs.join(' / ')+'</code><br/><span style="font-size:.9rem;">'+item.desc+'</span></div>';
-    switchTab('mirror');window.scrollTo({top:0,behavior:'smooth'});
+
+  function goToMirror(code) {
+    const item = LER_DB.find(function(i) { return i.code === code; }), banner = document.getElementById('selected-mirror-banner');
+    if (item) banner.innerHTML = '<div class="modal-panel" style="margin-bottom:1rem;border-left-color:var(--mirror);background:var(--mirror-bg);"><strong>Evaluando código espejo:</strong> <code>' + item.code + '</code> &harr; <code>' + item.pairs.join(' / ') + '</code><br/><span style="font-size:.9rem;">' + item.desc + '</span></div>';
+    switchTab('mirror'); window.scrollTo({ top: 0, behavior: 'smooth' });
   }
-  function evaluateMirror(){
-    const comp=document.getElementById('q-comp').value,copBox=document.getElementById('q-cop-box'),hpBox=document.getElementById('q-hp-box'),v=document.getElementById('mirror-verdict');
-    if(!comp){copBox.style.display='none';hpBox.style.display='none';v.innerHTML='';return;}
-    if(comp==='no'){copBox.style.display='none';hpBox.style.display='none';v.innerHTML='<div class="modal-panel" style="border-left-color:var(--danger);background:var(--danger-bg);"><strong style="color:var(--danger);">RESULTADO: RESIDUO PELIGROSO (Código con *)</strong><p style="margin:.5rem 0 0;">Por <strong>principio de precaución</strong> (Ley 7/2022), si se desconoce la composición del residuo con código espejo y no es posible analizarlo en laboratorio, debe clasificarse obligatoriamente como Residuo Peligroso.</p></div>';return;}
-    copBox.style.display='block';const cop=document.getElementById('q-cop').value;
-    if(!cop){hpBox.style.display='none';v.innerHTML='';return;}
-    if(cop==='si'){hpBox.style.display='none';v.innerHTML='<div class="modal-panel" style="border-left-color:var(--danger);background:var(--danger-bg);"><strong style="color:var(--danger);">RESULTADO: RESIDUO PELIGROSO AUTOMÁTICO (Código con *)</strong><p style="margin:.5rem 0 0;">El residuo iguala o supera los umbrales del <strong>Reglamento (UE) 2019/1021 (COP)</strong>. Pasa directamente a clasificarse como Residuo Peligroso sin necesidad de evaluar características HP adicionales.</p></div>';return;}
-    hpBox.style.display='block';const hp=document.getElementById('q-hp').value;
-    if(!hp){v.innerHTML='';return;}
-    if(hp==='si'){v.innerHTML='<div class="modal-panel" style="border-left-color:var(--danger);background:var(--danger-bg);"><strong style="color:var(--danger);">RESULTADO: RESIDUO PELIGROSO (Código con *)</strong><p style="margin:.5rem 0 0;">El residuo supera los límites de concentración del Reglamento (UE) 1357/2014 / 2017/997. Debes asignar el código espejo con asterisco (*) e indicar las características HP aplicables en su etiqueta.</p></div>';}
-    else{v.innerHTML='<div class="modal-panel" style="border-left-color:var(--safe);background:var(--safe-bg);"><strong style="color:var(--safe);">RESULTADO: RESIDUO NO PELIGROSO (Código sin *)</strong><p style="margin:.5rem 0 0;">Tras descartar presencia de COP por encima de umbral y verificar que no supera ningún límite HP 1–15 mediante sus N.º CAS, puedes asignar la variante no peligrosa del código espejo.</p></div>';}
+
+  function evaluateMirror() {
+    const comp = document.getElementById('q-comp').value, copBox = document.getElementById('q-cop-box'), hpBox = document.getElementById('q-hp-box'), v = document.getElementById('mirror-verdict');
+    if (!comp) { copBox.style.display = 'none'; hpBox.style.display = 'none'; v.innerHTML = ''; return; }
+    if (comp === 'no') { copBox.style.display = 'none'; hpBox.style.display = 'none'; v.innerHTML = '<div class="modal-panel" style="border-left-color:var(--danger);background:var(--danger-bg);"><strong style="color:var(--danger);">RESULTADO: RESIDUO PELIGROSO (Código con *)</strong><p style="margin:.5rem 0 0;">Por <strong>principio de precaución</strong> (Ley 7/2022), si se desconoce la composición del residuo con código espejo y no es posible analizarlo en laboratorio, debe clasificarse obligatoriamente como Residuo Peligroso.</p></div>'; return; }
+    copBox.style.display = 'block'; const cop = document.getElementById('q-cop').value;
+    if (!cop) { hpBox.style.display = 'none'; v.innerHTML = ''; return; }
+    if (cop === 'si') { hpBox.style.display = 'none'; v.innerHTML = '<div class="modal-panel" style="border-left-color:var(--danger);background:var(--danger-bg);"><strong style="color:var(--danger);">RESULTADO: RESIDUO PELIGROSO AUTOMÁTICO (Código con *)</strong><p style="margin:.5rem 0 0;">El residuo iguala o supera los umbrales del <strong>Reglamento (UE) 2019/1021 (COP)</strong>. Pasa directamente a clasificarse como Residuo Peligroso sin necesidad de evaluar características HP adicionales.</p></div>'; return; }
+    hpBox.style.display = 'block'; const hp = document.getElementById('q-hp').value;
+    if (!hp) { v.innerHTML = ''; return; }
+    if (hp === 'si') { v.innerHTML = '<div class="modal-panel" style="border-left-color:var(--danger);background:var(--danger-bg);"><strong style="color:var(--danger);">RESULTADO: RESIDUO PELIGROSO (Código con *)</strong><p style="margin:.5rem 0 0;">El residuo supera los límites de concentración del Reglamento (UE) 1357/2014 / 2017/997. Debes asignar el código espejo con asterisco (*) e indicar las características HP aplicables en su etiqueta.</p></div>'; }
+    else { v.innerHTML = '<div class="modal-panel" style="border-left-color:var(--safe);background:var(--safe-bg);"><strong style="color:var(--safe);">RESULTADO: RESIDUO NO PELIGROSO (Código sin *)</strong><p style="margin:.5rem 0 0;">Tras descartar presencia de COP por encima de umbral y verificar que no supera ningún límite HP 1–15 mediante sus N.º CAS, puedes asignar la variante no peligrosa del código espejo.</p></div>'; }
   }
-  document.querySelectorAll('.tab-btn').forEach(function(b){b.addEventListener('click',function(){switchTab(b.getAttribute('data-tab'));});});
-  document.querySelectorAll('.step-box').forEach(function(b){b.addEventListener('click',function(){selectStep(parseInt(b.getAttribute('data-step'),10));});});
-  document.getElementById('chapter-select').addEventListener('change',renderChapterCodes);
-  document.getElementById('search-input').addEventListener('keyup',filterCodes);
-  document.getElementById('q-comp').addEventListener('change',evaluateMirror);
-  document.getElementById('q-cop').addEventListener('change',evaluateMirror);
-  document.getElementById('q-hp').addEventListener('change',evaluateMirror);
-  document.addEventListener('click',function(e){if(e.target&&e.target.hasAttribute('data-eval'))goToMirror(e.target.getAttribute('data-eval'));});
-  populateChapters();
+
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.addEventListener('click', function() { switchTab(b.getAttribute('data-tab')); }); });
+  document.querySelectorAll('.step-box').forEach(function(b) { b.addEventListener('click', function() { selectStep(parseInt(b.getAttribute('data-step'), 10)); }); });
+  document.getElementById('chapter-select').addEventListener('change', renderChapterCodes);
+  document.getElementById('search-input').addEventListener('keyup', filterCodes);
+  document.getElementById('q-comp').addEventListener('change', evaluateMirror);
+  document.getElementById('q-cop').addEventListener('change', evaluateMirror);
+  document.getElementById('q-hp').addEventListener('change', evaluateMirror);
+  document.addEventListener('click', function(e) { if (e.target && e.target.hasAttribute('data-eval')) goToMirror(e.target.getAttribute('data-eval')); });
+
+  initData();
 })();
 </script>
 </body>
