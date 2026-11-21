@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Identificador Oficial de Código LER | Herramienta Técnica</title>
+  <style>
+    :root {
+      --primary: #0f4c5c;
+      --primary-light: #1b6b80;
+      --accent: #e36414;
+      --danger: #b91c1c;
+      --danger-bg: #fef2f2;
+      --safe: #15803d;
+      --safe-bg: #f0fdf4;
+      --mirror: #b45309;
+      --mirror-bg: #fffbeb;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); line-height: 1.5; }
+    header { background: var(--primary); color: #fff; padding: 2rem 1rem; text-align: center; }
+    header h1 { margin: 0 0 0.5rem; font-size: 1.8rem; }
+    header p { margin: 0; opacity: 0.9; max-width: 700px; margin-inline: auto; }
+    .container { max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
+    .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .tab-btn {
+      padding: 0.75rem 1.25rem; border: 1px solid var(--border); background: var(--card);
+      border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text); transition: 0.2s;
+    }
+    .tab-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 1.5rem;
+    }
+    .step-badge {
+      display: inline-block; background: var(--primary); color: #fff;
+      font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 4px; margin-bottom: 0.5rem;
+    }
+    select, input[type="text"] {
+      width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px;
+      font-size: 1rem; margin-top: 0.5rem;
+    }
+    .grid-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-top: 1rem; }
+    .step-box {
+      border: 2px solid var(--border); border-radius: 10px; padding: 1rem; cursor: pointer; transition: 0.2s;
+    }
+    .step-box:hover, .step-box.selected { border-color: var(--primary); background: #f0f9ff; }
+    .ler-item {
+      border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem;
+      display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;
+    }
+    .ler-code { font-family: monospace; font-size: 1.25rem; font-weight: 800; color: var(--primary); }
+    .badge { padding: 0.25rem 0.6rem; border-radius: 999px; font-size: 0.8rem; font-weight: 700; }
+    .badge-rp { background: var(--danger-bg); color: var(--danger); border: 1px solid #fecaca; }
+    .badge-rnp { background: var(--safe-bg); color: var(--safe); border: 1px solid #bbf7d0; }
+    .badge-mirror { background: var(--mirror-bg); color: var(--mirror); border: 1px solid #fde68a; }
+    .btn {
+      background: var(--primary); color: #fff; border: none; padding: 0.6rem 1rem;
+      border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.9rem;
+    }
+    .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
+    .modal-panel {
+      background: #f1f5f9; border-left: 4px solid var(--accent); padding: 1.25rem;
+      border-radius: 8px; margin-top: 1rem;
+    }
+    .question-box { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #cbd5e1; }
+    footer { text-align: center; padding: 2rem 1rem; color: var(--muted); font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Buscador y Asistente de Código LER</h1>
+  <p>Asigna la "matrícula" oficial a cada residuo siguiendo la jerarquía de 4 pasos (Decisión 2014/955/UE) y evalúa códigos espejo (COP y HP).</p>
+</header>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('wizard')">1. Asistente por Jerarquía (4 Pasos)</button>
+    <button class="tab-btn" onclick="switchTab('search')">2. Buscador Rápido por Nombre / Código</button>
+    <button class="tab-btn" onclick="switchTab('mirror')">3. Evaluador de Código Espejo (COP + HP)</button>
+  </div>
+
+  <!-- TAB 1: WIZARD 4 PASOS -->
+  <div id="tab-wizard" class="card">
+    <span class="step-badge">JERARQUÍA OBLIGATORIA DE BÚSQUEDA</span>
+    <h2>¿Dónde encaja tu residuo? Sigue el orden legal:</h2>
+    <div class="grid-steps">
+      <div class="step-box selected" id="box-step1" onclick="selectStep(1)">
+        <strong>Paso 1: Actividad generadora</strong>
+        <p style="font-size:0.85rem; color:var(--muted);">Capítulos 01–12 y 17–20. Busca primero en el sector de origen (evitando códigos 99).</p>
+      </div>
+      <div class="step-box" id="box-step2" onclick="selectStep(2)">
+        <strong>Paso 2: Residuos transversales</strong>
+        <p style="font-size:0.85rem; color:var(--muted);">Capítulos 13, 14 y 15. Aceites, disolventes, envases, trapos contaminados y absorbentes.</p>
+      </div>
+      <div class="step-box" id="box-step3" onclick="selectStep(3)">
+        <strong>Paso 3: Cajón de sastre</strong>
+        <p style="font-size:0.85rem; color:var(--muted);">Capítulo 16. Solo si el residuo no encaja en ninguno de los pasos anteriores.</p>
+      </div>
+      <div class="step-box" id="box-step4" onclick="selectStep(4)">
+        <strong>Paso 4: Último recurso (99)</strong>
+        <p style="font-size:0.85rem; color:var(--muted);">Códigos <code>xx xx 99</code> del capítulo de la actividad generadora.</p>
+      </div>
+    </div>
+
+    <div style="margin-top:1.5rem;">
+      <label for="chapter-select"><strong>Selecciona el Capítulo LER correspondiente:</strong></label>
+      <select id="chapter-select" onchange="renderChapterCodes()"></select>
+    </div>
+
+    <div id="wizard-results" style="margin-top:1.5rem;"></div>
+  </div>
+
+  <!-- TAB 2: BUSCADOR -->
+  <div id="tab-search" class="card" style="display:none;">
+    <span class="step-badge">CONSULTA DIRECTA</span>
+    <h2>Busca por descripción del residuo o dígitos LER</h2>
+    <input type="text" id="search-input" placeholder="Ej: hormigón, alquitrán, disolventes, envases, amianto, lodos, 17 01..." onkeyup="filterCodes()" />
+    <p style="font-size:0.85rem; color:var(--muted); margin-top:0.5rem;">
+      <em>Recuerda: tras localizar un código por nombre, verifica siempre que corresponde a tu capítulo de origen según la jerarquía de 4 pasos.</em>
+    </p>
+    <div id="search-results" style="margin-top:1.25rem;"></div>
+  </div>
+
+  <!-- TAB 3: EVALUADOR CÓDIGO ESPEJO -->
+  <div id="tab-mirror" class="card" style="display:none;">
+    <span class="step-badge">PROTOCOLO CÓDIGOS ESPEJO (LEY 7/2022)</span>
+    <h2>Determinación de Peligrosidad: Filtro COP y Características HP</h2>
+    <p>Cuando un residuo tiene dos códigos posibles (uno con <code>*</code> y otro sin <code>*</code>), sigue este orden estricto:</p>
+
+    <div class="question-box">
+      <strong>1. ¿Conoces la composición exacta del residuo (FDS / FISQ) o puedes analizarlo en laboratorio?</strong><br/>
+      <select id="q-comp" onchange="evaluateMirror()">
+        <option value="">-- Selecciona una opción --</option>
+        <option value="si">Sí, dispongo de FDS / analítica de composición</option>
+        <option value="no">No se conoce y no es viable analizarlo</option>
+      </select>
+    </div>
+
+    <div class="question-box" id="q-cop-box" style="display:none;">
+      <strong>2. Filtro COP (Reglamento UE 2019/1021): ¿Contiene Contaminantes Orgánicos Persistentes por encima del límite?</strong>
+      <p style="font-size:0.85rem; color:var(--muted); margin:0.25rem 0;">
+        Umbrales: Dioxinas/furanos (PCDD/PCDF) ≥ 15 µg/kg | PCB, DDT, Lindano, Aldrina, Retardantes ≥ 50 mg/kg.
+      </p>
+      <select id="q-cop" onchange="evaluateMirror()">
+        <option value="">-- Selecciona una opción --</option>
+        <option value="si">Sí, iguala o supera los umbrales COP</option>
+        <option value="no">No contiene COP o está por debajo del umbral</option>
+      </select>
+    </div>
+
+    <div class="question-box" id="q-hp-box" style="display:none;">
+      <strong>3. Filtro CLP y Características HP 1 a HP 15 (Reglamentos 1272/2008, 1357/2014 y 2017/997):</strong>
+      <p style="font-size:0.85rem; color:var(--muted); margin:0.25rem 0;">
+        ¿Supera alguna sustancia (buscada por N.º CAS) los límites HP? (Ej. Carc. 1A/1B H350 ≥ 0,1% [HP7]; Corrosivo H314 suma ≥ 5% [HP8]; Ecotóxico [HP14]).
+      </p>
+      <select id="q-hp" onchange="evaluateMirror()">
+        <option value="">-- Selecciona una opción --</option>
+        <option value="si">Sí, presenta al menos una característica HP 1 – HP 15</option>
+        <option value="no">No supera ningún límite de peligrosidad HP</option>
+      </select>
+    </div>
+
+    <div id="mirror-verdict"></div>
+  </div>
+</div>
+
+<footer>
+  Herramienta de apoyo técnico basada en Decisión 2014/955/UE, Ley 7/2022 y Reglamento (UE) 2019/1021.
+</footer>
+
+<script>
+  const CHAPTERS = [
+    { id: "01", step: 1, title: "01 - Prospección, extracción de minas y canteras" },
+    { id: "02", step: 1, title: "02 - Agricultura, ganadería, pesca y elaboración de alimentos" },
+    { id: "03", step: 1, title: "03 - Transformación de la madera, papel y cartón" },
+    { id: "04", step: 1, title: "04 - Industrias del cuero, de la piel y textil" },
+    { id: "05", step: 1, title: "05 - Refino del petróleo y purificación de gas natural" },
+    { id: "06", step: 1, title: "06 - Procesos químicos inorgánicos" },
+    { id: "07", step: 1, title: "07 - Procesos químicos orgánicos" },
+    { id: "08", step: 1, title: "08 - FFDU de revestimientos (pinturas, barnices), adhesivos y tintas" },
+    { id: "09", step: 1, title: "09 - Industria fotográfica" },
+    { id: "10", step: 1, title: "10 - Procesos térmicos" },
+    { id: "11", step: 1, title: "11 - Tratamiento químico de superficie y recubrimiento de metales" },
+    { id: "12", step: 1, title: "12 - Moldeado y tratamiento físico/mecánico de metales y plásticos" },
+    { id: "13", step: 2, title: "13 - Residuos de aceites y combustibles líquidos (transversal)" },
+    { id: "14", step: 2, title: "14 - Residuos de disolventes, refrigerantes y propelentes orgánicos (transversal)" },
+    { id: "15", step: 2, title: "15 - Residuos de envases; absorbentes, trapos de limpieza y EPI (transversal)" },
+    { id: "16", step: 3, title: "16 - Residuos no especificados en otro capítulo (cajón de sastre)" },
+    { id: "17", step: 1, title: "17 - Residuos de construcción y demolición (RCD)" },
+    { id: "18", step: 1, title: "18 - Servicios médicos o veterinarios" },
+    { id: "19", step: 1, title: "19 - Instalaciones de tratamiento de residuos y depuradoras (EDAR)" },
+    { id: "20", step: 1, title: "20 - Residuos municipales y asimilables" }
+  ];
+
+  const LER_DB = [
+    { code: "08 01 11*", ch: "08", desc: "Residuos de pintura y barniz que contienen disolventes orgánicos u otras sustancias peligrosas", type: "mirror", pair: "08 01 12" },
+    { code: "08 01 12", ch: "08", desc: "Residuos de pintura y barniz distintos de los especificados en el código 08 01 11", type: "mirror", pair: "08 01 11*" },
+    { code: "13 02 05*", ch: "13", desc: "Aceites minerales no clorados de motor, de transmisión mecánica y lubricantes", type: "rp" },
+    { code: "13 05 07*", ch: "13", desc: "Agua aceitosa procedente de separadores de agua/sustancias aceitosas", type: "rp" },
+    { code: "14 06 03*", ch: "14", desc: "Otros disolventes y mezclas de disolventes", type: "rp" },
+    { code: "15 01 01", ch: "15", desc: "Envases de papel y cartón", type: "rnp" },
+    { code: "15 01 02", ch: "15", desc: "Envases de plástico", type: "rnp" },
+    { code: "15 01 10*", ch: "15", desc: "Envases que contienen restos de sustancias peligrosas o están contaminados por ellas", type: "rp" },
+    { code: "15 02 02*", ch: "15", desc: "Absorbentes, materiales de filtración, trapos de limpieza y ropas protectoras contaminados por sustancias peligrosas", type: "mirror", pair: "15 02 03" },
+    { code: "15 02 03", ch: "15", desc: "Absorbentes, materiales de filtración, trapos de limpieza y ropas protectoras distintos de los especificados en el código 15 02 02", type: "mirror", pair: "15 02 02*" },
+    { code: "16 01 07*", ch: "16", desc: "Filtros de aceite", type: "rp" },
+    { code: "16 01 11*", ch: "16", desc: "Zapatas de freno que contienen amianto", type: "mirror", pair: "16 01 12" },
+    { code: "16 01 12", ch: "16", desc: "Zapatas de freno distintas de las especificadas en el código 16 01 11", type: "mirror", pair: "16 01 11*" },
+    { code: "16 06 01*", ch: "16", desc: "Baterías de plomo", type: "rp" },
+    { code: "17 01 01", ch: "17", desc: "Hormigón", type: "rnp" },
+    { code: "17 01 06*", ch: "17", desc: "Mezclas, o fracciones separadas, de hormigón, ladrillos, tejas y materiales cerámicos, que contienen sustancias peligrosas", type: "mirror", pair: "17 01 07" },
+    { code: "17 01 07", ch: "17", desc: "Mezclas de hormigón, ladrillos, tejas y materiales cerámicos distintas de las especificadas en el código 17 01 06", type: "mirror", pair: "17 01 06*" },
+    { code: "17 02 01", ch: "17", desc: "Madera", type: "rnp" },
+    { code: "17 02 04*", ch: "17", desc: "Vidrio, plástico y madera que contienen sustancias peligrosas o están contaminados por ellas", type: "rp" },
+    { code: "17 03 03*", ch: "17", desc: "Alquitrán de hulla y productos alquitranados (RP absoluto - HP 7)", type: "rp" },
+    { code: "17 05 03*", ch: "17", desc: "Tierra y piedras que contienen sustancias peligrosas", type: "mirror", pair: "17 05 04" },
+    { code: "17 05 04", ch: "17", desc: "Tierra y piedras distintas de las especificadas en el código 17 05 03", type: "mirror", pair: "17 05 03*" },
+    { code: "17 06 01*", ch: "17", desc: "Materiales de aislamiento que contienen amianto", type: "mirror", pair: "17 06 04" },
+    { code: "17 06 03*", ch: "17", desc: "Otros materiales de aislamiento que consisten en sustancias peligrosas o contienen dichas sustancias", type: "mirror", pair: "17 06 04" },
+    { code: "17 06 04", ch: "17", desc: "Materiales de aislamiento distintos de los especificados en los códigos 17 06 01 y 17 06 03", type: "mirror", pair: "17 06 01* / 17 06 03*" },
+    { code: "17 06 05*", ch: "17", desc: "Materiales de construcción que contienen amianto (ej. fibrocemento)", type: "rp" },
+    { code: "19 08 05", ch: "19", desc: "Lodos del tratamiento de aguas residuales urbanas", type: "rnp" },
+    { code: "20 01 01", ch: "20", desc: "Papel y cartón municipal", type: "rnp" },
+    { code: "20 03 04", ch: "20", desc: "Lodos de fosas sépticas", type: "rnp" },
+    { code: "20 03 06", ch: "20", desc: "Residuos de la limpieza de alcantarillas", type: "rnp" },
+    { code: "20 03 99", ch: "20", desc: "Residuos municipales no especificados en otra categoría (Paso 4 - último recurso)", type: "rnp" }
+  ];
+
+  let currentStep = 1;
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    ['wizard', 'search', 'mirror'].forEach(t => {
+      document.getElementById('tab-' + t).style.display = (t === tab) ? 'block' : 'none';
+    });
+    if (tab === 'search') filterCodes();
+  }
+
+  function selectStep(step) {
+    currentStep = step;
+    document.querySelectorAll('.step-box').forEach(b => b.classList.remove('selected'));
+    document.getElementById('box-step' + step).classList.add('selected');
+    populateChapters();
+  }
+
+  function populateChapters() {
+    const sel = document.getElementById('chapter-select');
+    sel.innerHTML = '';
+    const filtered = CHAPTERS.filter(c => (currentStep === 4 ? c.step === 1 : c.step === currentStep));
+    filtered.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.title;
+      sel.appendChild(opt);
+    });
+    renderChapterCodes();
+  }
+
+  function renderItemHTML(item) {
+    let badge = '';
+    let actionBtn = '';
+    if (item.type === 'rp') {
+      badge = `<span class="badge badge-rp">Residuo Peligroso Absoluto (*)</span>`;
+    } else if (item.type === 'rnp') {
+      badge = `<span class="badge badge-rnp">No Peligroso Absoluto</span>`;
+    } else {
+      badge = `<span class="badge badge-mirror">Código Espejo (Pareja: ${item.pair})</span>`;
+      actionBtn = `<button class="btn btn-outline" onclick="goToMirror()">Evaluar COP / HP</button>`;
+    }
+    return `
+      <div class="ler-item">
+        <div>
+          <div class="ler-code">${item.code}</div>
+          <div>${item.desc}</div>
+        </div>
+        <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+          ${badge}
+          ${actionBtn}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderChapterCodes() {
+    const ch = document.getElementById('chapter-select').value;
+    const container = document.getElementById('wizard-results');
+    let items = LER_DB.filter(i => i.ch === ch);
+    if (currentStep === 4) {
+      container.innerHTML = `
+        <div class="modal-panel">
+          <strong>Regla del Paso 4:</strong> Únicamente si has descartado todos los códigos específicos de los pasos 1, 2 y 3, asigna el código genérico acabado en <code>99</code> del capítulo <strong>${ch}</strong> (ej. <code>${ch} 99 99</code> - Residuos no especificados en otra categoría).
+        </div>`;
+      return;
+    }
+    if (items.length === 0) {
+      container.innerHTML = `<p style="color:var(--muted);">No hay ejemplos precargados en este capítulo en la demo. Puedes añadir todos los códigos del capítulo ${ch} al array <code>LER_DB</code>.</p>`;
+      return;
+    }
+    container.innerHTML = items.map(renderItemHTML).join('');
+  }
+
+  function filterCodes() {
+    const q = document.getElementById('search-input').value.toLowerCase().trim();
+    const results = LER_DB.filter(i => i.code.toLowerCase().includes(q) || i.desc.toLowerCase().includes(q));
+    document.getElementById('search-results').innerHTML = results.length
+      ? results.map(renderItemHTML).join('')
+      : '<p style="color:var(--muted);">No se encontraron coincidencias.</p>';
+  }
+
+  function goToMirror() {
+    document.querySelectorAll('.tab-btn')[2].click();
+  }
+
+  function evaluateMirror() {
+    const comp = document.getElementById('q-comp').value;
+    const copBox = document.getElementById('q-cop-box');
+    const hpBox = document.getElementById('q-hp-box');
+    const verdict = document.getElementById('mirror-verdict');
+
+    if (!comp) { copBox.style.display = 'none'; hpBox.style.display = 'none'; verdict.innerHTML = ''; return; }
+
+    if (comp === 'no') {
+      copBox.style.display = 'none';
+      hpBox.style.display = 'none';
+      verdict.innerHTML = `
+        <div class="modal-panel" style="border-left-color:var(--danger); background:var(--danger-bg);">
+          <strong style="color:var(--danger);">RESULTADO: RESIDUO PELIGROSO (Código con *)</strong>
+          <p style="margin:0.5rem 0 0;">Por <strong>principio de precaución</strong> (Ley 7/2022), si se desconoce la composición del residuo con código espejo y no es posible analizarlo en laboratorio, debe clasificarse obligatoriamente como Residuo Peligroso.</p>
+        </div>`;
+      return;
+    }
+
+    copBox.style.display = 'block';
+    const cop = document.getElementById('q-cop').value;
+    if (!cop) { hpBox.style.display = 'none'; verdict.innerHTML = ''; return; }
+
+    if (cop === 'si') {
+      hpBox.style.display = 'none';
+      verdict.innerHTML = `
+        <div class="modal-panel" style="border-left-color:var(--danger); background:var(--danger-bg);">
+          <strong style="color:var(--danger);">RESULTADO: RESIDUO PELIGROSO AUTOMÁTICO (Código con *)</strong>
+          <p style="margin:0.5rem 0 0;">El residuo iguala o supera los umbrales del <strong>Reglamento (UE) 2019/1021 (COP)</strong>. Pasa directamente a clasificarse como Residuo Peligroso sin necesidad de evaluar características HP adicionales.</p>
+        </div>`;
+      return;
+    }
+
+    hpBox.style.display = 'block';
+    const hp = document.getElementById('q-hp').value;
+    if (!hp) { verdict.innerHTML = ''; return; }
+
+    if (hp === 'si') {
+      verdict.innerHTML = `
+        <div class="modal-panel" style="border-left-color:var(--danger); background:var(--danger-bg);">
+          <strong style="color:var(--danger);">RESULTADO: RESIDUO PELIGROSO (Código con *)</strong>
+          <p style="margin:0.5rem 0 0;">El residuo supera los límites de concentración del Reglamento (UE) 1357/2014 / 2017/997. Debes asignar el código espejo con asterisco (*) e indicar las características HP aplicables en su etiqueta.</p>
+        </div>`;
+    } else {
+      verdict.innerHTML = `
+        <div class="modal-panel" style="border-left-color:var(--safe); background:var(--safe-bg);">
+          <strong style="color:var(--safe);">RESULTADO: RESIDUO NO PELIGROSO (Código sin *)</strong>
+          <p style="margin:0.5rem 0 0;">Tras descartar presencia de COP por encima de umbral y verificar que no supera ningún límite HP 1–15 mediante sus N.º CAS, puedes asignar la variante no peligrosa del código espejo.</p>
+        </div>`;
+    }
+  }
+
+  populateChapters();
+</script>
+</body>
+</html>
